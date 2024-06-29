@@ -3,7 +3,6 @@ const std = @import("std");
 const ray = @import("raylib.zig");
 const World = @import("World.zig");
 const config = @import("Config.zig");
-const Chunk = @import("chunk.zig").Chunk(config.chunk_size, config.chunk_size);
 
 const Player = @This();
 
@@ -48,44 +47,6 @@ fn hitGroundOrCeiling(self: *Player) void {
     self.speed.y = 0;
 }
 
-fn collideWithChunk(self: *Player, chunk: *Chunk, dir_x: f32, dir_y: f32, callback: ?fn (*Player) void) void {
-    var collided = false;
-
-    var bbox = self.getBbox();
-    bbox.x -= chunk.position.x;
-    bbox.y -= chunk.position.y;
-    const clamp = std.math.clamp;
-    const left_index: usize = @intFromFloat(clamp(@divFloor(bbox.x, config.tile_size) - 1, 0, config.chunk_size - 1));
-    const top_index: usize = @intFromFloat(clamp(@divFloor(bbox.y, config.tile_size) - 1, 0, config.chunk_size - 1));
-    const right_index: usize = @intFromFloat(clamp(@divFloor(bbox.x + bbox.width - 1, config.tile_size) + 2, 0, config.chunk_size));
-    const bottom_index: usize = @intFromFloat(clamp(@divFloor(bbox.y + bbox.height - 1, config.tile_size) + 2, 0, config.chunk_size));
-
-    for (top_index..bottom_index) |tile_y| {
-        for (left_index..right_index) |tile_x| {
-            const tile = chunk.getTileAssert(tile_x, tile_y);
-            if (tile.empty) {
-                continue;
-            }
-            const player_bbox = self.getBbox();
-            const tile_bbox: ray.Rectangle = .{
-                .x = chunk.position.x + @as(f32, @floatFromInt(tile_x)) * config.tile_size,
-                .y = chunk.position.y + @as(f32, @floatFromInt(tile_y)) * config.tile_size,
-                .width = config.tile_size,
-                .height = config.tile_size,
-            };
-            const collision = ray.GetCollisionRec(player_bbox, tile_bbox);
-            if (collision.width != 0 and collision.height != 0) {
-                self.position.x -= dir_x * collision.width;
-                self.position.y -= dir_y * collision.height;
-                collided = true;
-            }
-        }
-    }
-    if (collided and callback != null) {
-        callback.?(self);
-    }
-}
-
 fn getPositionAxis(value: anytype, x_axis: bool) f32 {
     if (x_axis) {
         return value.x;
@@ -105,43 +66,6 @@ fn getPositionAxisPtr(value: anytype, x_axis: bool) *f32 {
         return &value.x;
     }
     return &value.y;
-}
-
-fn moveAxis(self: *Player, world: World, comptime x_axis: bool) void {
-    const position = getPositionAxisPtr(&self.position, x_axis);
-    const speed = getPositionAxis(self.speed, x_axis);
-    position.* += speed;
-
-    const sign = std.math.sign(speed);
-    const moving_positive = (sign == 1);
-    const bbox = self.getBbox();
-    const bbox_pos = getPositionAxis(bbox, x_axis);
-    const bbox_other_pos = getPositionAxis(bbox, !x_axis);
-    const bbox_size = getSizeAxis(bbox, x_axis);
-    const bbox_other_size = getSizeAxis(bbox, !x_axis);
-
-    const chunk_pixels: f32 = @floatFromInt(config.chunk_size * config.tile_size);
-    const first_chunk_index: isize = @intFromFloat(bbox_other_pos / chunk_pixels);
-    const second_chunk_index: isize = @intFromFloat((bbox_other_pos + bbox_other_size) / chunk_pixels);
-    const primary_index: isize = @intFromFloat((bbox_pos + @as(f32, @floatFromInt(@intFromBool(moving_positive))) * bbox_size) / chunk_pixels);
-
-    if (x_axis) {
-        const top_chunk = world.getChunk(primary_index, first_chunk_index) orelse return;
-        self.collideWithChunk(top_chunk, sign, 0, hitWall);
-    } else {
-        const left_chunk = world.getChunk(first_chunk_index, primary_index) orelse return;
-        self.collideWithChunk(left_chunk, 0, sign, hitGroundOrCeiling);
-    }
-
-    if (second_chunk_index != first_chunk_index) {
-        if (x_axis) {
-            const bottom_chunk = world.getChunk(primary_index, second_chunk_index) orelse return;
-            self.collideWithChunk(bottom_chunk, sign, 0, hitWall);
-        } else {
-            const right_chunk = world.getChunk(second_chunk_index, primary_index) orelse return;
-            self.collideWithChunk(right_chunk, 0, sign, hitGroundOrCeiling);
-        }
-    }
 }
 
 fn inRange(value: anytype, from: anytype, to: anytype) bool {
@@ -166,22 +90,60 @@ fn stayInsideWorld(self: *Player, world: World) void {
 }
 
 fn moveAndCollideAxis(self: *Player, world: World, comptime x_axis: bool) void {
-    _ = world;
-    const mask: ray.Vector2 = if (x_axis) .{ .x = 1, .y = 0 } else .{ .x = 0, .y = 1 };
-    _ = mask;
+    const sign = std.math.sign;
+    const mask: ray.Vector2 = if (x_axis) .{ .x = sign(self.speed.x), .y = 0 } else .{ .x = 0, .y = sign(self.speed.y) };
 
-    const position = getPositionAxisPtr(self.position, x_axis);
+    const position = getPositionAxisPtr(&self.position, x_axis);
     const speed = getPositionAxis(self.speed, x_axis);
     position.* += speed;
+
+    const clamp = std.math.clamp;
+    const bbox = self.getBbox();
+
+    const max_x: f32 = @floatFromInt(world.tiles_width);
+    const max_y: f32 = @floatFromInt(world.tiles_height);
+    const left: usize = @intFromFloat(clamp(@divFloor(bbox.x, config.tile_size), 0, max_x));
+    const top: usize = @intFromFloat(clamp(@divFloor(bbox.y, config.tile_size), 0, max_y));
+    const right: usize = @intFromFloat(clamp(@divFloor(bbox.x + bbox.width - 1, config.tile_size) + 2, 0, max_x));
+    const bottom: usize = @intFromFloat(clamp(@divFloor(bbox.y + bbox.height - 1, config.tile_size) + 2, 0, max_y));
+
+    var collided = false;
+    for (top..bottom) |tile_y| {
+        for (left..right) |tile_x| {
+            const tile = world.getTileAssert(tile_x, tile_y);
+            if (tile.empty) {
+                continue;
+            }
+
+            const player_bbox = self.getBbox();
+            const tile_bbox: ray.Rectangle = .{
+                .x = @as(f32, @floatFromInt(tile_x)) * config.tile_size,
+                .y = @as(f32, @floatFromInt(tile_y)) * config.tile_size,
+                .width = config.tile_size,
+                .height = config.tile_size,
+            };
+            const collision = ray.GetCollisionRec(player_bbox, tile_bbox);
+            if (collision.width > 0 or collision.height > 0) {
+                collided = true;
+                const subtract = ray.Vector2Multiply(.{ .x = collision.width, .y = collision.height }, mask);
+                self.position = ray.Vector2Subtract(self.position, subtract);
+            }
+        }
+    }
+
+    if (collided) {
+        if (x_axis) {
+            self.hitWall();
+        } else {
+            self.hitGroundOrCeiling();
+        }
+    }
 }
 
 fn move(self: *Player, world: World) void {
     self.on_ground = false;
-    self.moveAxis(world, true);
-    self.moveAxis(world, false);
-
-    // self.moveAndCollideAxis(world, true);
-    // self.moveAndCollideAxis(world, false);
+    self.moveAndCollideAxis(world, true);
+    self.moveAndCollideAxis(world, false);
 
     self.stayInsideWorld(world);
 }

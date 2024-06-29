@@ -24,8 +24,6 @@ fn updateCamera() void {
 }
 
 fn update() !void {
-    // const x_pos: usize = @intCast(@max(@divFloor(ray.GetMouseX() + @as(c_int, @intFromFloat(camera.target.x - camera.offset.x)), config.tile_size), 0));
-    // const y_pos: usize = @intCast(@max(@divFloor(ray.GetMouseY() + @as(c_int, @intFromFloat(camera.target.y - camera.offset.y)), config.tile_size), 0));
     const mouse_world_pos = util.screenSpaceToWorldSpace(.{ .x = @floatFromInt(ray.GetMouseX()), .y = @floatFromInt(ray.GetMouseY()) }, camera);
     const tile_coord = util.worldSpaceToTile(mouse_world_pos, world);
 

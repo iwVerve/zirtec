@@ -4,18 +4,13 @@ const Allocator = std.mem.Allocator;
 
 const ray = @import("raylib.zig");
 const Tile = @import("Tile.zig");
+const config = @import("config.zig");
 
 const World = @This();
 
-const config = @import("config.zig");
-const Chunk = @import("chunk.zig").Chunk(config.chunk_size, config.chunk_size);
-
-// tile_map: ArrayList(ArrayList(Tile)),
+tile_map: ArrayList(ArrayList(Tile)),
 tiles_width: usize,
 tiles_height: usize,
-chunk_map: ArrayList(ArrayList(Chunk)),
-chunks_width: usize,
-chunks_height: usize,
 
 allocator: Allocator,
 
@@ -25,29 +20,20 @@ const WorldOptions = struct {
 };
 
 pub fn init(allocator: Allocator, options: WorldOptions) !World {
-    var chunk_map = ArrayList(ArrayList(Chunk)).init(allocator);
-    const chunks_width = @divFloor(options.tile_width - 1, config.chunk_size) + 1;
-    const chunks_height = @divFloor(options.tile_height - 1, config.chunk_size) + 1;
-
-    for (0..chunks_height) |chunk_y| {
-        var chunk_row = ArrayList(Chunk).init(allocator);
-        for (0..chunks_width) |chunk_x| {
-            const x: f32 = @floatFromInt(chunk_x * config.chunk_size * config.tile_size);
-            const y: f32 = @floatFromInt(chunk_y * config.chunk_size * config.tile_size);
-            const position: ray.Vector2 = .{ .x = x, .y = y };
-            const chunk = Chunk.init(position);
-            try chunk_row.append(chunk);
+    var tile_map = ArrayList(ArrayList(Tile)).init(allocator);
+    for (0..options.tile_height) |_| {
+        var tile_row = ArrayList(Tile).init(allocator);
+        for (0..options.tile_width) |_| {
+            const tile: Tile = .{ .empty = true };
+            try tile_row.append(tile);
         }
-        try chunk_map.append(chunk_row);
+        try tile_map.append(tile_row);
     }
 
     var world: World = .{
-        .chunk_map = chunk_map,
-        .chunks_width = chunks_width,
-        .chunks_height = chunks_height,
-
-        .tiles_width = config.chunk_size * chunks_width,
-        .tiles_height = config.chunk_size * chunks_height,
+        .tile_map = tile_map,
+        .tiles_width = options.tile_width,
+        .tiles_height = options.tile_height,
 
         .allocator = allocator,
     };
@@ -71,34 +57,14 @@ pub fn init(allocator: Allocator, options: WorldOptions) !World {
 }
 
 pub fn deinit(self: *World) void {
-    for (self.chunk_map.items) |chunk_row| {
-        chunk_row.deinit();
+    for (self.tile_map.items) |tile_row| {
+        tile_row.deinit();
     }
-    self.chunk_map.deinit();
-}
-
-pub fn getChunkAssert(self: World, chunk_x: usize, chunk_y: usize) *Chunk {
-    return &self.chunk_map.items[chunk_y].items[chunk_x];
-}
-
-pub fn getChunk(self: World, chunk_x: anytype, chunk_y: anytype) ?*Chunk {
-    if (chunk_x < 0 or chunk_y < 0) {
-        return null;
-    }
-    if (chunk_x >= self.chunks_width or chunk_y >= self.chunks_height) {
-        return null;
-    }
-    return self.getChunkAssert(@intCast(chunk_x), @intCast(chunk_y));
+    self.tile_map.deinit();
 }
 
 pub fn getTileAssert(self: World, tile_x: usize, tile_y: usize) *Tile {
-    const chunk_x = @divFloor(tile_x, config.chunk_size);
-    const chunk_y = @divFloor(tile_y, config.chunk_size);
-    const chunk_tile_x = @mod(tile_x, config.chunk_size);
-    const chunk_tile_y = @mod(tile_y, config.chunk_size);
-
-    const chunk = self.getChunkAssert(chunk_x, chunk_y);
-    return chunk.getTileAssert(chunk_tile_x, chunk_tile_y);
+    return &self.tile_map.items[tile_y].items[tile_x];
 }
 
 pub fn getTile(self: World, tile_x: usize, tile_y: usize) ?*Tile {
@@ -116,18 +82,23 @@ pub fn draw(self: World, camera: ray.Camera2D) void {
         .height = config.window_height,
     };
 
-    const chunk_pixels = config.tile_size * config.chunk_size;
     const clamp = std.math.clamp;
 
-    const left_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.x, chunk_pixels), 0, @as(f32, @floatFromInt(self.chunks_width))));
-    const top_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.y, chunk_pixels), 0, @as(f32, @floatFromInt(self.chunks_height))));
-    const right_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.x + camera_bounds.width - 1, chunk_pixels) + 1, 0, @as(f32, @floatFromInt(self.chunks_width))));
-    const bottom_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.y + camera_bounds.height - 1, chunk_pixels) + 1, 0, @as(f32, @floatFromInt(self.chunks_height))));
+    const left_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.x, config.tile_size), 0, @as(f32, @floatFromInt(self.tiles_width))));
+    const top_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.y, config.tile_size), 0, @as(f32, @floatFromInt(self.tiles_height))));
+    const right_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.x + camera_bounds.width - 1, config.tile_size) + 1, 0, @as(f32, @floatFromInt(self.tiles_width))));
+    const bottom_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.y + camera_bounds.height - 1, config.tile_size) + 1, 0, @as(f32, @floatFromInt(self.tiles_height))));
 
-    for (top_index..bottom_index) |chunk_row| {
-        for (left_index..right_index) |chunk_column| {
-            const chunk: Chunk = self.chunk_map.items[chunk_row].items[chunk_column];
-            chunk.draw();
+    for (top_index..bottom_index) |tile_y| {
+        for (left_index..right_index) |tile_x| {
+            const tile = self.getTileAssert(tile_x, tile_y);
+            const rectangle: ray.Rectangle = .{
+                .x = @floatFromInt(tile_x * config.tile_size),
+                .y = @floatFromInt(tile_y * config.tile_size),
+                .width = config.tile_size,
+                .height = config.tile_size,
+            };
+            tile.draw(rectangle);
         }
     }
 }
