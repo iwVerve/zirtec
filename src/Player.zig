@@ -54,13 +54,6 @@ fn getPositionAxis(value: anytype, x_axis: bool) f32 {
     return value.y;
 }
 
-fn getSizeAxis(value: anytype, x_axis: bool) f32 {
-    if (x_axis) {
-        return value.width;
-    }
-    return value.height;
-}
-
 fn getPositionAxisPtr(value: anytype, x_axis: bool) *f32 {
     if (x_axis) {
         return &value.x;
