@@ -3,6 +3,7 @@ const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 
 const ray = @import("raylib.zig");
+const znoise = @import("znoise");
 const Tile = @import("Tile.zig");
 const config = @import("config.zig");
 
@@ -18,6 +19,21 @@ const WorldOptions = struct {
     tile_width: usize = 128,
     tile_height: usize = 128,
 };
+
+fn generate(world: *World, options: WorldOptions) void {
+    _ = options;
+    const gen = znoise.FnlGenerator{ .seed = 0, .frequency = 0.03 };
+
+    for (0..world.tiles_width) |tile_x| {
+        for (16..world.tiles_height) |tile_y| {
+            const value = gen.noise2(@floatFromInt(tile_x), @floatFromInt(tile_y));
+            if (value > 0) {
+                const tile = world.getTileAssert(tile_x, tile_y);
+                tile.empty = false;
+            }
+        }
+    }
+}
 
 pub fn init(allocator: Allocator, options: WorldOptions) !World {
     var tile_map = ArrayList(ArrayList(Tile)).init(allocator);
@@ -38,20 +54,7 @@ pub fn init(allocator: Allocator, options: WorldOptions) !World {
         .allocator = allocator,
     };
 
-    var prng = std.Random.DefaultPrng.init(0);
-    const rand = prng.random();
-    for (0..options.tile_height) |y| {
-        for (0..options.tile_width) |x| {
-            const tile = world.getTileAssert(x, y);
-            if (rand.int(u4) == 0) {
-                tile.empty = false;
-            }
-        }
-    }
-    for (0..@min(options.tile_width, options.tile_height)) |i| {
-        const tile = world.getTileAssert(i, options.tile_height - i - 1);
-        tile.empty = false;
-    }
+    world.generate(options);
 
     return world;
 }

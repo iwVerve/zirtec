@@ -16,7 +16,7 @@ fn updateCamera() void {
     const left_edge: f32 = config.window_width / (2 * camera.zoom);
     const right_edge: f32 = @as(f32, @floatFromInt(world.tiles_width)) * config.tile_size - config.window_width / (2 * camera.zoom);
     const top_edge: f32 = config.window_height / (2 * camera.zoom);
-    const bottom_edge: f32 = @as(f32, @floatFromInt(world.tiles_height)) * config.tile_size - config.window_width / (2 * camera.zoom);
+    const bottom_edge: f32 = @as(f32, @floatFromInt(world.tiles_height)) * config.tile_size - config.window_height / (2 * camera.zoom);
 
     const clamp = std.math.clamp;
     camera.target.x = clamp(camera.target.x, left_edge, @max(left_edge, right_edge));

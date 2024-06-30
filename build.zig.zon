@@ -19,6 +19,9 @@
             .url = "https://github.com/raysan5/raylib/archive/37205bba84263c5168f7aaeef4da9c43c56a87e1.tar.gz",
             .hash = "1220524af2f7a9f80d99de7bf07507d9b9ca8b258c5763972a48662c01c4ac2ac3c4",
         },
+        .znoise = .{
+            .path = "lib/znoise",
+        },
     },
     .paths = .{
         // This makes *all* files, recursively, included in this package. It is generally

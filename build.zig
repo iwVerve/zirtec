@@ -18,6 +18,10 @@ pub fn build(b: *std.Build) void {
     });
     exe.linkLibrary(raylib.artifact("raylib"));
 
+    const znoise = b.dependency("znoise", .{});
+    exe.root_module.addImport("znoise", znoise.module("root"));
+    exe.linkLibrary(znoise.artifact("FastNoiseLite"));
+
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
 
