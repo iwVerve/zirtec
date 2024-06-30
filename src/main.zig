@@ -13,10 +13,10 @@ var player: Player = undefined;
 fn updateCamera() void {
     camera.target = player.position;
 
-    const left_edge: f32 = config.window_width / 2;
-    const right_edge: f32 = @as(f32, @floatFromInt(world.tiles_width)) * config.tile_size - config.window_width / 2;
-    const top_edge: f32 = config.window_height / 2;
-    const bottom_edge: f32 = @as(f32, @floatFromInt(world.tiles_height)) * config.tile_size - config.window_width / 2;
+    const left_edge: f32 = config.window_width / (2 * camera.zoom);
+    const right_edge: f32 = @as(f32, @floatFromInt(world.tiles_width)) * config.tile_size - config.window_width / (2 * camera.zoom);
+    const top_edge: f32 = config.window_height / (2 * camera.zoom);
+    const bottom_edge: f32 = @as(f32, @floatFromInt(world.tiles_height)) * config.tile_size - config.window_width / (2 * camera.zoom);
 
     const clamp = std.math.clamp;
     camera.target.x = clamp(camera.target.x, left_edge, @max(left_edge, right_edge));
@@ -67,10 +67,10 @@ pub fn main() !void {
 
     player = .{ .position = .{ .x = 64, .y = 64 } };
 
-    const zoom = 1;
+    const zoom = 2;
     camera = .{
         .target = .{ .x = 0, .y = 0 },
-        .offset = .{ .x = config.window_width / @as(f32, 2 * zoom), .y = config.window_height / @as(f32, 2 * zoom) },
+        .offset = .{ .x = config.window_width / 2, .y = config.window_height / 2 },
         .zoom = zoom,
         .rotation = 0,
     };

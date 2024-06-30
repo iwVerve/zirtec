@@ -23,10 +23,9 @@ pub const UVector2 = struct {
 };
 
 pub fn screenSpaceToWorldSpace(position: ray.Vector2, camera: ray.Camera2D) ray.Vector2 {
-    // const scaled_offset = ray.Vector2Multiply(camera.offset, .{ .x = camera.zoom, .y = camera.zoom });
-    const scaled_offset = camera.offset;
-    const add = ray.Vector2Subtract(camera.target, scaled_offset);
-    return ray.Vector2Add(position, add);
+    const position_from_offset = ray.Vector2Subtract(position, camera.offset);
+    const scaled_position = ray.Vector2Divide(position_from_offset, .{ .x = camera.zoom, .y = camera.zoom });
+    return ray.Vector2Add(camera.target, scaled_position);
 }
 
 pub fn worldSpaceToTile(position: ray.Vector2, world: World) ?UVector2 {

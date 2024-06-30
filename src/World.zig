@@ -76,8 +76,8 @@ pub fn getTile(self: World, tile_x: usize, tile_y: usize) ?*Tile {
 
 pub fn draw(self: World, camera: ray.Camera2D) void {
     const camera_bounds: ray.Rectangle = .{
-        .x = camera.target.x - camera.zoom * camera.offset.x,
-        .y = camera.target.y - camera.zoom * camera.offset.y,
+        .x = camera.target.x - camera.offset.x,
+        .y = camera.target.y - camera.offset.y,
         .width = config.window_width,
         .height = config.window_height,
     };
