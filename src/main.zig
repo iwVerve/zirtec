@@ -5,6 +5,7 @@ const World = @import("World.zig");
 const Player = @import("Player.zig");
 const config = @import("config.zig");
 const util = @import("util.zig");
+const asset = @import("asset.zig");
 
 var world: World = undefined;
 var camera: ray.Camera2D = undefined;
@@ -31,10 +32,12 @@ fn update() !void {
         const tile = world.getTile(tile_coord.?.x, tile_coord.?.y);
         if (tile != null) {
             if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_LEFT)) {
-                tile.?.*.empty = false;
+                tile.?.type = .wood;
+                world.updateLightLevel(tile_coord.?.x, tile_coord.?.y);
             }
             if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_RIGHT)) {
-                tile.?.*.empty = true;
+                tile.?.type = .empty;
+                world.updateLightLevel(tile_coord.?.x, tile_coord.?.y);
             }
         }
     }
@@ -52,8 +55,8 @@ fn draw() !void {
     ray.ClearBackground(ray.BLUE);
 
     ray.BeginMode2D(camera);
-    world.draw(camera);
     player.draw();
+    world.draw(camera);
     ray.EndMode2D();
 }
 
@@ -78,6 +81,9 @@ pub fn main() !void {
     ray.InitWindow(config.window_width, config.window_height, "hello, raylib!");
     defer ray.CloseWindow();
     ray.SetTargetFPS(60);
+
+    asset.load();
+    defer asset.unload();
 
     while (!ray.WindowShouldClose()) {
         try update();

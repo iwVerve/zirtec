@@ -33,9 +33,28 @@ fn generate(world: *World, options: WorldOptions) void {
     for (0..world.tiles_width) |tile_x| {
         const value = gen.noise2(@floatFromInt(tile_x), 0);
         const height: usize = @intFromFloat(@max(base_height + value * variation, 0));
+        var dirt_blocks: u8 = @intFromFloat(8 + 4 * gen.noise2(@floatFromInt(tile_x), 32));
         for (height..world.tiles_height) |tile_y| {
             const tile = world.getTileAssert(tile_x, tile_y);
-            tile.empty = false;
+            if (dirt_blocks > 0) {
+                tile.type = .dirt;
+                dirt_blocks -= 1;
+            } else {
+                tile.type = .stone;
+            }
+        }
+    }
+}
+
+fn initialize_light(self: *World) void {
+    for (0..self.tiles_width) |tile_x| {
+        for (0..self.tiles_height) |tile_y| {
+            const tile = self.getTileAssert(tile_x, tile_y);
+            if (tile.isOpaque()) {
+                break;
+            }
+            self.setLightLevelAssert(tile_x, tile_y, 15);
+            tile.sees_sky = true;
         }
     }
 }
@@ -45,7 +64,7 @@ pub fn init(allocator: Allocator, options: WorldOptions) !World {
     for (0..options.tile_height) |_| {
         var tile_row = ArrayList(Tile).init(allocator);
         for (0..options.tile_width) |_| {
-            const tile: Tile = .{ .empty = true };
+            const tile: Tile = .{ .type = .empty };
             try tile_row.append(tile);
         }
         try tile_map.append(tile_row);
@@ -60,6 +79,7 @@ pub fn init(allocator: Allocator, options: WorldOptions) !World {
     };
 
     world.generate(options);
+    world.initialize_light();
 
     return world;
 }
@@ -76,10 +96,71 @@ pub fn getTileAssert(self: World, tile_x: usize, tile_y: usize) *Tile {
 }
 
 pub fn getTile(self: World, tile_x: usize, tile_y: usize) ?*Tile {
-    if (tile_x >= self.tiles_width or tile_y >= self.tiles_height) {
+    if (!self.tileExists(tile_x, tile_y)) {
         return null;
     }
     return self.getTileAssert(tile_x, tile_y);
+}
+
+pub fn tileExists(self: World, tile_x: usize, tile_y: usize) bool {
+    return tile_x < self.tiles_width and tile_y < self.tiles_height;
+}
+
+pub fn setLightLevelAssert(self: *World, tile_x: usize, tile_y: usize, light: u4) void {
+    const tile = self.getTileAssert(tile_x, tile_y);
+    if (light > tile.light) {
+        tile.light = light;
+        if (tile_x > 0) {
+            self.setLightLevelAssert(tile_x - 1, tile_y, light - 1);
+        }
+        if (tile_y > 0) {
+            self.setLightLevelAssert(tile_x, tile_y - 1, light - 1);
+        }
+        self.setLightLevel(tile_x + 1, tile_y, light - 1);
+        self.setLightLevel(tile_x, tile_y + 1, light - 1);
+    }
+}
+
+pub fn setLightLevel(self: *World, tile_x: usize, tile_y: usize, light: u4) void {
+    if (self.tileExists(tile_x, tile_y)) {
+        self.setLightLevelAssert(tile_x, tile_y, light);
+    }
+}
+
+pub fn updateLightLevel(self: *World, tile_x: usize, tile_y: usize) void {
+    if (!self.tileExists(tile_x, tile_y)) unreachable;
+    var light: u4 = 0;
+
+    const tile = self.getTileAssert(tile_x, tile_y);
+    const above = self.getTile(tile_x, tile_y - 1);
+    if (!tile.isOpaque() and above != null and above.?.sees_sky) {
+        tile.sees_sky = true;
+        light = 15;
+    }
+
+    const below = self.getTile(tile_x, tile_y + 1);
+    if (below != null) {
+        if (tile.sees_sky != !below.?.sees_sky) {
+            self.updateLightLevel(tile_x, tile_y + 1);
+        }
+    }
+
+    if (tile_x > 0) {
+        light = @max(light, self.getTileAssert(tile_x - 1, tile_y).light);
+    }
+    if (tile_y > 0) {
+        light = @max(light, self.getTileAssert(tile_x, tile_y - 1).light);
+    }
+    if (tile_x < self.tiles_width - 1) {
+        light = @max(light, self.getTileAssert(tile_x + 1, tile_y).light);
+    }
+    if (tile_y < self.tiles_height - 1) {
+        light = @max(light, self.getTileAssert(tile_x, tile_y + 1).light);
+    }
+    if (light > 0) {
+        light -= 1;
+    }
+    self.setLightLevelAssert(tile_x, tile_y, light);
 }
 
 pub fn draw(self: World, camera: ray.Camera2D) void {

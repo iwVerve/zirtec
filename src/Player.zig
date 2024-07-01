@@ -104,7 +104,7 @@ fn moveAndCollideAxis(self: *Player, world: World, comptime x_axis: bool) void {
     for (top..bottom) |tile_y| {
         for (left..right) |tile_x| {
             const tile = world.getTileAssert(tile_x, tile_y);
-            if (tile.empty) {
+            if (!tile.isSolid()) {
                 continue;
             }
 
