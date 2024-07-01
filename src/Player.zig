@@ -142,7 +142,7 @@ fn move(self: *Player, world: World) void {
 }
 
 pub fn update(self: *Player, world: World) void {
-    const h_input: f32 = @floatFromInt(@as(i8, @intCast(@intFromBool(ray.IsKeyDown(ray.KEY_RIGHT)))) - @as(i8, @intCast(@intFromBool(ray.IsKeyDown(ray.KEY_LEFT)))));
+    const h_input: f32 = @floatFromInt(@as(i8, @intCast(@intFromBool(ray.IsKeyDown(ray.KEY_D)))) - @as(i8, @intCast(@intFromBool(ray.IsKeyDown(ray.KEY_A)))));
     const sign = std.math.sign(self.speed.x);
     if (h_input == sign or sign == 0) {
         self.speed.x += acceleration * h_input;

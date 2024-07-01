@@ -16,21 +16,26 @@ tiles_height: usize,
 allocator: Allocator,
 
 const WorldOptions = struct {
-    tile_width: usize = 128,
-    tile_height: usize = 128,
+    tile_width: usize = 2048,
+    tile_height: usize = 256,
 };
 
 fn generate(world: *World, options: WorldOptions) void {
     _ = options;
-    const gen = znoise.FnlGenerator{ .seed = 0, .frequency = 0.03 };
+    const gen = znoise.FnlGenerator{
+        .seed = 0,
+        .frequency = 0.02,
+        .fractal_type = .fbm,
+    };
 
+    const base_height = 48;
+    const variation = 16;
     for (0..world.tiles_width) |tile_x| {
-        for (16..world.tiles_height) |tile_y| {
-            const value = gen.noise2(@floatFromInt(tile_x), @floatFromInt(tile_y));
-            if (value > 0) {
-                const tile = world.getTileAssert(tile_x, tile_y);
-                tile.empty = false;
-            }
+        const value = gen.noise2(@floatFromInt(tile_x), 0);
+        const height: usize = @intFromFloat(@max(base_height + value * variation, 0));
+        for (height..world.tiles_height) |tile_y| {
+            const tile = world.getTileAssert(tile_x, tile_y);
+            tile.empty = false;
         }
     }
 }
