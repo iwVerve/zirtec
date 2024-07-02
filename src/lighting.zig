@@ -75,9 +75,13 @@ fn findInfluence(world: *World, tile_x: usize, tile_y: usize, area: *InfluenceAr
     if (level == 0) {
         return;
     }
-    findInfluence(world, tile_x - 1, tile_y, area, level - 1);
+    if (tile_x > 0) {
+        findInfluence(world, tile_x - 1, tile_y, area, level - 1);
+    }
     findInfluence(world, tile_x + 1, tile_y, area, level - 1);
-    findInfluence(world, tile_x, tile_y - 1, area, level - 1);
+    if (tile_y > 0) {
+        findInfluence(world, tile_x, tile_y - 1, area, level - 1);
+    }
     findInfluence(world, tile_x, tile_y + 1, area, level - 1);
 }
 
@@ -105,8 +109,8 @@ fn recalculateRegion(world: *World, from_x: usize, from_y: usize, to_x: usize, t
         }
     }
     var tally: u16 = 0;
-    for (from_y - @min(from_y, 1)..@min(to_y + 2, world.tiles_width)) |tile_y| {
-        for (from_x - @min(from_x, 1)..@min(to_x + 2, world.tiles_height)) |tile_x| {
+    for (from_y - @min(from_y, 1)..@min(to_y + 2, world.tiles_height)) |tile_y| {
+        for (from_x - @min(from_x, 1)..@min(to_x + 2, world.tiles_width)) |tile_x| {
             propagateLight(world, tile_x, tile_y);
             tally += 1;
         }
