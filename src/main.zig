@@ -6,6 +6,7 @@ const Player = @import("Player.zig");
 const config = @import("config.zig");
 const util = @import("util.zig");
 const asset = @import("asset.zig");
+const lighting = @import("lighting.zig");
 
 var world: World = undefined;
 var camera: ray.Camera2D = undefined;
@@ -33,11 +34,11 @@ fn update() !void {
         if (tile != null) {
             if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_LEFT)) {
                 tile.?.type = .wood;
-                world.updateLightLevel(tile_coord.?.x, tile_coord.?.y);
+                lighting.updateSkyLight(&world, tile_coord.?.x, tile_coord.?.y);
             }
             if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_RIGHT)) {
                 tile.?.type = .empty;
-                world.updateLightLevel(tile_coord.?.x, tile_coord.?.y);
+                lighting.updateSkyLight(&world, tile_coord.?.x, tile_coord.?.y);
             }
         }
     }

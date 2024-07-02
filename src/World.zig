@@ -6,6 +6,7 @@ const ray = @import("raylib.zig");
 const znoise = @import("znoise");
 const Tile = @import("Tile.zig");
 const config = @import("config.zig");
+const lighting = @import("lighting.zig");
 
 const World = @This();
 
@@ -46,19 +47,6 @@ fn generate(world: *World, options: WorldOptions) void {
     }
 }
 
-fn initialize_light(self: *World) void {
-    for (0..self.tiles_width) |tile_x| {
-        for (0..self.tiles_height) |tile_y| {
-            const tile = self.getTileAssert(tile_x, tile_y);
-            if (tile.isOpaque()) {
-                break;
-            }
-            self.setLightLevelAssert(tile_x, tile_y, 15);
-            tile.sees_sky = true;
-        }
-    }
-}
-
 pub fn init(allocator: Allocator, options: WorldOptions) !World {
     var tile_map = ArrayList(ArrayList(Tile)).init(allocator);
     for (0..options.tile_height) |_| {
@@ -79,7 +67,7 @@ pub fn init(allocator: Allocator, options: WorldOptions) !World {
     };
 
     world.generate(options);
-    world.initialize_light();
+    lighting.initializeSkyLight(&world);
 
     return world;
 }
@@ -104,63 +92,6 @@ pub fn getTile(self: World, tile_x: usize, tile_y: usize) ?*Tile {
 
 pub fn tileExists(self: World, tile_x: usize, tile_y: usize) bool {
     return tile_x < self.tiles_width and tile_y < self.tiles_height;
-}
-
-pub fn setLightLevelAssert(self: *World, tile_x: usize, tile_y: usize, light: u4) void {
-    const tile = self.getTileAssert(tile_x, tile_y);
-    if (light > tile.light) {
-        tile.light = light;
-        if (tile_x > 0) {
-            self.setLightLevelAssert(tile_x - 1, tile_y, light - 1);
-        }
-        if (tile_y > 0) {
-            self.setLightLevelAssert(tile_x, tile_y - 1, light - 1);
-        }
-        self.setLightLevel(tile_x + 1, tile_y, light - 1);
-        self.setLightLevel(tile_x, tile_y + 1, light - 1);
-    }
-}
-
-pub fn setLightLevel(self: *World, tile_x: usize, tile_y: usize, light: u4) void {
-    if (self.tileExists(tile_x, tile_y)) {
-        self.setLightLevelAssert(tile_x, tile_y, light);
-    }
-}
-
-pub fn updateLightLevel(self: *World, tile_x: usize, tile_y: usize) void {
-    if (!self.tileExists(tile_x, tile_y)) unreachable;
-    var light: u4 = 0;
-
-    const tile = self.getTileAssert(tile_x, tile_y);
-    const above = self.getTile(tile_x, tile_y - 1);
-    if (!tile.isOpaque() and above != null and above.?.sees_sky) {
-        tile.sees_sky = true;
-        light = 15;
-    }
-
-    const below = self.getTile(tile_x, tile_y + 1);
-    if (below != null) {
-        if (tile.sees_sky != !below.?.sees_sky) {
-            self.updateLightLevel(tile_x, tile_y + 1);
-        }
-    }
-
-    if (tile_x > 0) {
-        light = @max(light, self.getTileAssert(tile_x - 1, tile_y).light);
-    }
-    if (tile_y > 0) {
-        light = @max(light, self.getTileAssert(tile_x, tile_y - 1).light);
-    }
-    if (tile_x < self.tiles_width - 1) {
-        light = @max(light, self.getTileAssert(tile_x + 1, tile_y).light);
-    }
-    if (tile_y < self.tiles_height - 1) {
-        light = @max(light, self.getTileAssert(tile_x, tile_y + 1).light);
-    }
-    if (light > 0) {
-        light -= 1;
-    }
-    self.setLightLevelAssert(tile_x, tile_y, light);
 }
 
 pub fn draw(self: World, camera: ray.Camera2D) void {

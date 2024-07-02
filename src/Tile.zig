@@ -11,7 +11,8 @@ const TileType = enum {
 };
 
 type: TileType,
-light: u4 = 0,
+sky_light: u4 = 0,
+source: u4 = 0,
 sees_sky: bool = false,
 
 pub fn isSolid(self: Tile) bool {
@@ -35,6 +36,7 @@ pub fn draw(self: Tile, rectangle: ray.Rectangle) void {
     if (texture != null) {
         ray.DrawTexture(texture.?, @intFromFloat(rectangle.x), @intFromFloat(rectangle.y), ray.WHITE);
     }
-    const darkness_alpha = 17 * @as(u8, @intCast(15 - self.light));
+    const darkness_alpha = 17 * @as(u8, @intCast(15 - self.sky_light));
+    // const darkness_alpha: u8 = if (self.sees_sky) 0 else 255;
     ray.DrawRectangleRec(rectangle, .{ .r = 0, .g = 0, .b = 0, .a = darkness_alpha });
 }
