@@ -104,11 +104,22 @@ fn moveAndCollideAxis(self: *Player, world: World, comptime x_axis: bool) void {
     for (top..bottom) |tile_y| {
         for (left..right) |tile_x| {
             const tile = world.getTileAssert(tile_x, tile_y);
-            if (!tile.isSolid()) {
+            const collision_type = tile.getCollisionType();
+            if (collision_type == .empty) {
                 continue;
             }
-
             const player_bbox = self.getBbox();
+            if (collision_type == .platform) {
+                if (mask.y != 1 or ray.IsKeyDown(ray.KEY_S)) {
+                    continue;
+                }
+
+                const y_pos: f32 = @floatFromInt(tile_y * config.tile_size);
+                if (player_bbox.y + player_bbox.height - self.speed.y > y_pos) {
+                    continue;
+                }
+            }
+
             const tile_bbox: ray.Rectangle = .{
                 .x = @as(f32, @floatFromInt(tile_x)) * config.tile_size,
                 .y = @as(f32, @floatFromInt(tile_y)) * config.tile_size,

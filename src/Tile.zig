@@ -9,26 +9,35 @@ pub const BlockType = enum {
     dirt,
     stone,
     wood,
+    platform,
 };
 
 pub const WallType = enum {
     empty,
     stone,
+    wood,
+};
+
+pub const CollisionType = enum {
+    empty,
+    solid,
+    platform,
 };
 
 block: BlockType = .empty,
 wall: WallType = .empty,
 sky_light: u4 = 0,
 
-pub fn isSolid(self: Tile) bool {
+pub fn getCollisionType(self: Tile) CollisionType {
     return switch (self.block) {
-        .empty => false,
-        .stone, .dirt, .wood => true,
+        .empty => .empty,
+        .stone, .dirt, .wood => .solid,
+        .platform => .platform,
     };
 }
 
 pub fn isOpaque(self: Tile) bool {
-    return self.isSolid() or self.wall != .empty;
+    return self.getCollisionType() == .solid or self.wall != .empty;
 }
 
 fn getBlockTexture(block: BlockType) ?ray.Texture2D {
@@ -37,6 +46,7 @@ fn getBlockTexture(block: BlockType) ?ray.Texture2D {
         .dirt => asset.blocks.dirt,
         .stone => asset.blocks.stone,
         .wood => asset.blocks.wood,
+        .platform => asset.blocks.platform,
     };
 }
 
@@ -44,6 +54,7 @@ fn getWallTexture(wall: WallType) ?ray.Texture2D {
     return switch (wall) {
         .empty => null,
         .stone => asset.walls.stone,
+        .wood => asset.walls.wood,
     };
 }
 

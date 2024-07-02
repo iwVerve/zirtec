@@ -32,6 +32,7 @@ const BuildState = struct {
                 .{ ray.KEY_ONE, .dirt },
                 .{ ray.KEY_TWO, .stone },
                 .{ ray.KEY_THREE, .wood },
+                .{ ray.KEY_FOUR, .platform },
             };
             inline for (data) |entry| {
                 if (ray.IsKeyPressed(entry[0])) {
@@ -41,6 +42,7 @@ const BuildState = struct {
         } else if (self.layer == .wall) {
             const data = .{
                 .{ ray.KEY_ONE, .stone },
+                .{ ray.KEY_TWO, .wood },
             };
             inline for (data) |entry| {
                 if (ray.IsKeyPressed(entry[0])) {
