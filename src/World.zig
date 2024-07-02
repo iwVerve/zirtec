@@ -95,7 +95,13 @@ pub fn tileExists(self: World, tile_x: usize, tile_y: usize) bool {
     return tile_x < self.tiles_width and tile_y < self.tiles_height;
 }
 
-pub fn draw(self: World, camera: ray.Camera2D) void {
+pub const DrawOptions = struct {
+    walls: bool = false,
+    blocks: bool = false,
+    lighting: bool = false,
+};
+
+pub fn draw(self: World, camera: ray.Camera2D, comptime options: DrawOptions) void {
     const camera_bounds: ray.Rectangle = .{
         .x = camera.target.x - camera.offset.x,
         .y = camera.target.y - camera.offset.y,
@@ -119,7 +125,7 @@ pub fn draw(self: World, camera: ray.Camera2D) void {
                 .width = config.tile_size,
                 .height = config.tile_size,
             };
-            tile.draw(rectangle);
+            tile.draw(rectangle, options);
         }
     }
 }

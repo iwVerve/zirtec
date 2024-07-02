@@ -58,8 +58,9 @@ fn draw() !void {
     ray.ClearBackground(ray.BLUE);
 
     ray.BeginMode2D(camera);
+    world.draw(camera, .{ .walls = true, .blocks = true });
     player.draw();
-    world.draw(camera);
+    world.draw(camera, .{ .lighting = true });
     ray.EndMode2D();
 }
 

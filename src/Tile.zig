@@ -1,5 +1,6 @@
 const ray = @import("raylib.zig");
 const asset = @import("asset.zig");
+const World = @import("World.zig");
 
 const Tile = @This();
 
@@ -46,17 +47,23 @@ fn getWallTexture(wall: WallType) ?ray.Texture2D {
     };
 }
 
-pub fn draw(self: Tile, rectangle: ray.Rectangle) void {
-    const wall_texture = getWallTexture(self.wall);
-    if (wall_texture != null) {
-        ray.DrawTexture(wall_texture.?, @intFromFloat(rectangle.x), @intFromFloat(rectangle.y), ray.WHITE);
+pub fn draw(self: Tile, rectangle: ray.Rectangle, comptime options: World.DrawOptions) void {
+    if (options.walls) {
+        const wall_texture = getWallTexture(self.wall);
+        if (wall_texture != null) {
+            ray.DrawTexture(wall_texture.?, @intFromFloat(rectangle.x), @intFromFloat(rectangle.y), ray.WHITE);
+        }
     }
 
-    const block_texture = getBlockTexture(self.block);
-    if (block_texture != null) {
-        ray.DrawTexture(block_texture.?, @intFromFloat(rectangle.x), @intFromFloat(rectangle.y), ray.WHITE);
+    if (options.blocks) {
+        const block_texture = getBlockTexture(self.block);
+        if (block_texture != null) {
+            ray.DrawTexture(block_texture.?, @intFromFloat(rectangle.x), @intFromFloat(rectangle.y), ray.WHITE);
+        }
     }
-    const darkness_alpha = 17 * @as(u8, @intCast(15 - self.sky_light));
-    // const darkness_alpha: u8 = if (self.sees_sky) 0 else 255;
-    ray.DrawRectangleRec(rectangle, .{ .r = 0, .g = 0, .b = 0, .a = darkness_alpha });
+
+    if (options.lighting) {
+        const darkness_alpha = 17 * @as(u8, @intCast(15 - self.sky_light));
+        ray.DrawRectangleRec(rectangle, .{ .r = 0, .g = 0, .b = 0, .a = darkness_alpha });
+    }
 }
