@@ -4,14 +4,14 @@ const World = @import("World.zig");
 
 const Tile = @This();
 
-const BlockType = enum {
+pub const BlockType = enum {
     empty,
     dirt,
     stone,
     wood,
 };
 
-const WallType = enum {
+pub const WallType = enum {
     empty,
     stone,
 };

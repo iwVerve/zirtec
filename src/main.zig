@@ -7,10 +7,76 @@ const config = @import("config.zig");
 const util = @import("util.zig");
 const asset = @import("asset.zig");
 const lighting = @import("lighting.zig");
+const Tile = @import("Tile.zig");
 
 var world: World = undefined;
 var camera: ray.Camera2D = undefined;
 var player: Player = undefined;
+
+var build_state: BuildState = .{};
+
+const BuildState = struct {
+    const Layer = enum { block, wall };
+
+    layer: Layer = .block,
+    block: Tile.BlockType = .wood,
+    wall: Tile.WallType = .stone,
+
+    pub fn update(self: *BuildState) void {
+        if (ray.IsKeyPressed(ray.KEY_TAB)) {
+            self.layer = if (self.layer == .block) .wall else .block;
+        }
+
+        if (self.layer == .block) {
+            const data = .{
+                .{ ray.KEY_ONE, .dirt },
+                .{ ray.KEY_TWO, .stone },
+                .{ ray.KEY_THREE, .wood },
+            };
+            inline for (data) |entry| {
+                if (ray.IsKeyPressed(entry[0])) {
+                    self.block = entry[1];
+                }
+            }
+        } else if (self.layer == .wall) {
+            const data = .{
+                .{ ray.KEY_ONE, .stone },
+            };
+            inline for (data) |entry| {
+                if (ray.IsKeyPressed(entry[0])) {
+                    self.wall = entry[1];
+                }
+            }
+        }
+
+        const mouse_world_pos = util.screenSpaceToWorldSpace(.{ .x = @floatFromInt(ray.GetMouseX()), .y = @floatFromInt(ray.GetMouseY()) }, camera);
+        const tile_coord = util.worldSpaceToTile(mouse_world_pos, world);
+
+        if (tile_coord != null) {
+            const tile = world.getTile(tile_coord.?.x, tile_coord.?.y);
+            if (tile != null) {
+                const old_opaque = tile.?.isOpaque();
+                if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_LEFT)) {
+                    if (self.layer == .block) {
+                        tile.?.block = self.block;
+                    } else if (self.layer == .wall) {
+                        tile.?.wall = self.wall;
+                    }
+                }
+                if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_RIGHT)) {
+                    if (self.layer == .block) {
+                        tile.?.block = .empty;
+                    } else if (self.layer == .wall) {
+                        tile.?.wall = .empty;
+                    }
+                }
+                if (tile.?.isOpaque() != old_opaque) {
+                    lighting.updateSkyLight(&world, tile_coord.?.x, tile_coord.?.y);
+                }
+            }
+        }
+    }
+};
 
 fn updateCamera() void {
     camera.target = player.position;
@@ -26,25 +92,7 @@ fn updateCamera() void {
 }
 
 fn update() !void {
-    const mouse_world_pos = util.screenSpaceToWorldSpace(.{ .x = @floatFromInt(ray.GetMouseX()), .y = @floatFromInt(ray.GetMouseY()) }, camera);
-    const tile_coord = util.worldSpaceToTile(mouse_world_pos, world);
-
-    if (tile_coord != null) {
-        const tile = world.getTile(tile_coord.?.x, tile_coord.?.y);
-        if (tile != null) {
-            const old_opaque = tile.?.isOpaque();
-            if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_LEFT)) {
-                tile.?.block = .wood;
-            }
-            if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_RIGHT)) {
-                tile.?.block = .empty;
-            }
-            if (tile.?.isOpaque() != old_opaque) {
-                lighting.updateSkyLight(&world, tile_coord.?.x, tile_coord.?.y);
-            }
-        }
-    }
-
+    build_state.update();
     player.update(world);
     updateCamera();
 
