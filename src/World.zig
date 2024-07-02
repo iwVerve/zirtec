@@ -38,10 +38,11 @@ fn generate(world: *World, options: WorldOptions) void {
         for (height..world.tiles_height) |tile_y| {
             const tile = world.getTileAssert(tile_x, tile_y);
             if (dirt_blocks > 0) {
-                tile.type = .dirt;
+                tile.block = .dirt;
                 dirt_blocks -= 1;
             } else {
-                tile.type = .stone;
+                tile.block = .stone;
+                tile.wall = .stone;
             }
         }
     }
@@ -52,7 +53,7 @@ pub fn init(allocator: Allocator, options: WorldOptions) !World {
     for (0..options.tile_height) |_| {
         var tile_row = ArrayList(Tile).init(allocator);
         for (0..options.tile_width) |_| {
-            const tile: Tile = .{ .type = .empty };
+            const tile: Tile = .{};
             try tile_row.append(tile);
         }
         try tile_map.append(tile_row);

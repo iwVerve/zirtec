@@ -3,38 +3,59 @@ const asset = @import("asset.zig");
 
 const Tile = @This();
 
-const TileType = enum {
+const BlockType = enum {
     empty,
     dirt,
     stone,
     wood,
 };
 
-type: TileType,
+const WallType = enum {
+    empty,
+    stone,
+};
+
+block: BlockType = .empty,
+wall: WallType = .empty,
 sky_light: u4 = 0,
-source: u4 = 0,
 sees_sky: bool = false,
 
 pub fn isSolid(self: Tile) bool {
-    return switch (self.type) {
+    return switch (self.block) {
         .empty => false,
         .stone, .dirt, .wood => true,
     };
 }
 
 pub fn isOpaque(self: Tile) bool {
-    return self.isSolid();
+    return self.isSolid() or self.wall != .empty;
+}
+
+fn getBlockTexture(block: BlockType) ?ray.Texture2D {
+    return switch (block) {
+        .empty => null,
+        .dirt => asset.blocks.dirt,
+        .stone => asset.blocks.stone,
+        .wood => asset.blocks.wood,
+    };
+}
+
+fn getWallTexture(wall: WallType) ?ray.Texture2D {
+    return switch (wall) {
+        .empty => null,
+        .stone => asset.walls.stone,
+    };
 }
 
 pub fn draw(self: Tile, rectangle: ray.Rectangle) void {
-    const texture: ?ray.Texture2D = switch (self.type) {
-        .empty => null,
-        .dirt => asset.dirt,
-        .stone => asset.stone,
-        .wood => asset.wood,
-    };
-    if (texture != null) {
-        ray.DrawTexture(texture.?, @intFromFloat(rectangle.x), @intFromFloat(rectangle.y), ray.WHITE);
+    const wall_texture = getWallTexture(self.wall);
+    if (wall_texture != null) {
+        ray.DrawTexture(wall_texture.?, @intFromFloat(rectangle.x), @intFromFloat(rectangle.y), ray.WHITE);
+    }
+
+    const block_texture = getBlockTexture(self.block);
+    if (block_texture != null) {
+        ray.DrawTexture(block_texture.?, @intFromFloat(rectangle.x), @intFromFloat(rectangle.y), ray.WHITE);
     }
     const darkness_alpha = 17 * @as(u8, @intCast(15 - self.sky_light));
     // const darkness_alpha: u8 = if (self.sees_sky) 0 else 255;

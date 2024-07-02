@@ -33,11 +33,11 @@ fn update() !void {
         const tile = world.getTile(tile_coord.?.x, tile_coord.?.y);
         if (tile != null) {
             if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_LEFT)) {
-                tile.?.type = .wood;
+                tile.?.block = .wood;
                 lighting.updateSkyLight(&world, tile_coord.?.x, tile_coord.?.y);
             }
             if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_RIGHT)) {
-                tile.?.type = .empty;
+                tile.?.block = .empty;
                 lighting.updateSkyLight(&world, tile_coord.?.x, tile_coord.?.y);
             }
         }
