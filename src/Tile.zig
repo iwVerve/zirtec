@@ -18,7 +18,6 @@ const WallType = enum {
 block: BlockType = .empty,
 wall: WallType = .empty,
 sky_light: u4 = 0,
-sees_sky: bool = false,
 
 pub fn isSolid(self: Tile) bool {
     return switch (self.block) {

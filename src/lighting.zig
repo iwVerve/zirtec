@@ -5,39 +5,17 @@ pub fn initializeSkyLight(world: *World) void {
         for (0..world.tiles_height) |tile_y| {
             const tile = world.getTileAssert(tile_x, tile_y);
             if (tile.isOpaque()) {
-                break;
+                continue;
             }
             increaseSkyLight(world, tile_x, tile_y, 15);
-            tile.sees_sky = true;
         }
     }
 }
 
 pub fn updateSkyLight(world: *World, tile_x: usize, tile_y: usize) void {
-    var light: u4 = 0;
-
     const tile = world.getTileAssert(tile_x, tile_y);
-    const above = world.getTile(tile_x, tile_y - 1);
-    if (tile.isOpaque()) {
-        tile.sees_sky = false;
-    } else {
-        if (above == null) {
-            tile.sees_sky = true;
-        } else {
-            tile.sees_sky = above.?.sees_sky;
-        }
-    }
-    if (tile.sees_sky) {
-        light = 15;
-    }
+    const light: u4 = if (tile.isOpaque()) 0 else 15;
     setSkyLight(world, tile_x, tile_y, light);
-
-    const below = world.getTile(tile_x, tile_y + 1);
-    if (below != null) {
-        if (tile.sees_sky != below.?.sees_sky) {
-            updateSkyLight(world, tile_x, tile_y + 1);
-        }
-    }
 }
 
 fn setSkyLight(world: *World, tile_x: usize, tile_y: usize, light: u4) void {
@@ -78,15 +56,44 @@ pub fn increaseSkyLight(world: *World, tile_x: usize, tile_y: usize, level: u4) 
     propagateLight(world, tile_x, tile_y);
 }
 
+const InfluenceArea = struct {
+    from_x: usize,
+    from_y: usize,
+    to_x: usize,
+    to_y: usize,
+};
+
+fn findInfluence(world: *World, tile_x: usize, tile_y: usize, area: *InfluenceArea, level: u4) void {
+    const tile = world.getTile(tile_x, tile_y);
+    if (tile == null or tile.?.sky_light > level) {
+        return;
+    }
+    area.from_x = @min(area.from_x, tile_x);
+    area.from_y = @min(area.from_y, tile_y);
+    area.to_x = @max(area.to_x, tile_x);
+    area.to_y = @max(area.to_y, tile_y);
+    if (level == 0) {
+        return;
+    }
+    findInfluence(world, tile_x - 1, tile_y, area, level - 1);
+    findInfluence(world, tile_x + 1, tile_y, area, level - 1);
+    findInfluence(world, tile_x, tile_y - 1, area, level - 1);
+    findInfluence(world, tile_x, tile_y + 1, area, level - 1);
+}
+
 pub fn decreaseSkyLight(world: *World, tile_x: usize, tile_y: usize) void {
     const tile = world.getTileAssert(tile_x, tile_y);
     const old_level = tile.sky_light;
+
+    var area: InfluenceArea = .{ .from_x = tile_x, .from_y = tile_y, .to_x = tile_x, .to_y = tile_y };
+    findInfluence(world, tile_x, tile_y, &area, old_level);
+
     recalculateRegion(
         world,
-        tile_x - @min(tile_x, old_level),
-        tile_y - @min(tile_y, old_level),
-        @min(tile_x + old_level, world.tiles_width),
-        @min(tile_y + old_level, world.tiles_height),
+        area.from_x,
+        area.from_y,
+        area.to_x,
+        area.to_y,
     );
 }
 
@@ -94,12 +101,14 @@ fn recalculateRegion(world: *World, from_x: usize, from_y: usize, to_x: usize, t
     for (from_y..to_y + 1) |tile_y| {
         for (from_x..to_x + 1) |tile_x| {
             const tile = world.getTileAssert(tile_x, tile_y);
-            tile.sky_light = if (tile.sees_sky) 15 else 0;
+            tile.sky_light = if (tile.isOpaque()) 0 else 15;
         }
     }
-    for (from_y - @min(from_y, 1)..to_y + 2) |tile_y| {
-        for (from_x - @min(from_x, 1)..to_x + 2) |tile_x| {
+    var tally: u16 = 0;
+    for (from_y - @min(from_y, 1)..@min(to_y + 2, world.tiles_width)) |tile_y| {
+        for (from_x - @min(from_x, 1)..@min(to_x + 2, world.tiles_height)) |tile_x| {
             propagateLight(world, tile_x, tile_y);
+            tally += 1;
         }
     }
 }

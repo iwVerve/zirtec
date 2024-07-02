@@ -32,12 +32,14 @@ fn update() !void {
     if (tile_coord != null) {
         const tile = world.getTile(tile_coord.?.x, tile_coord.?.y);
         if (tile != null) {
+            const old_opaque = tile.?.isOpaque();
             if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_LEFT)) {
                 tile.?.block = .wood;
-                lighting.updateSkyLight(&world, tile_coord.?.x, tile_coord.?.y);
             }
             if (ray.IsMouseButtonDown(ray.MOUSE_BUTTON_RIGHT)) {
                 tile.?.block = .empty;
+            }
+            if (tile.?.isOpaque() != old_opaque) {
                 lighting.updateSkyLight(&world, tile_coord.?.x, tile_coord.?.y);
             }
         }
