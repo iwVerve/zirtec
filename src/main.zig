@@ -122,7 +122,9 @@ pub fn main() !void {
     world = try World.init(allocator, .{});
     defer world.deinit();
 
-    player = .{ .position = .{ .x = 64, .y = 64 } };
+    player = .{};
+    player.position = world.findPlayerSpawn();
+    player.position.y -= player.size.y - player.origin.y;
 
     const zoom = 2;
     camera = .{

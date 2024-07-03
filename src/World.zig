@@ -101,6 +101,27 @@ pub const DrawOptions = struct {
     lighting: bool = false,
 };
 
+pub fn findPlayerSpawn(self: World) ray.Vector2 {
+    const left = @divFloor(self.tiles_width, 2);
+    const right = left + 1;
+    const spawn_x: f32 = @as(f32, @floatFromInt(config.tile_size)) * (@as(f32, @floatFromInt(left)) + @as(f32, @floatFromInt(right + 1))) / 2;
+    for (0..self.tiles_height) |tile_y| {
+        for (left..right + 1) |tile_x| {
+            const tile = self.getTileAssert(tile_x, tile_y);
+            if (tile.block != .empty) {
+                return .{
+                    .x = spawn_x,
+                    .y = @floatFromInt(config.tile_size * tile_y),
+                };
+            }
+        }
+    }
+    return .{
+        .x = spawn_x,
+        .y = @floatFromInt(self.tiles_height * config.tile_size),
+    };
+}
+
 pub fn draw(self: World, camera: ray.Camera2D, comptime options: DrawOptions) void {
     const camera_bounds: ray.Rectangle = .{
         .x = camera.target.x - camera.offset.x,

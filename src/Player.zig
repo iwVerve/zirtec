@@ -12,7 +12,7 @@ const max_run_speed = 3;
 const jump_speed = 5;
 const max_fall_speed = 12;
 
-position: ray.Vector2,
+position: ray.Vector2 = .{ .x = 0, .y = 0 },
 speed: ray.Vector2 = .{ .x = 0, .y = 0 },
 gravity: ray.Vector2 = .{ .x = 0, .y = 0.2 },
 on_ground: bool = false,
