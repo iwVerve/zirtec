@@ -19,12 +19,12 @@ allocator: Allocator,
 const WorldOptions = struct {
     tile_width: usize = 2048,
     tile_height: usize = 256,
+    seed: i32 = 0,
 };
 
 fn generate(world: *World, options: WorldOptions) void {
-    _ = options;
     const gen = znoise.FnlGenerator{
-        .seed = 0,
+        .seed = options.seed,
         .frequency = 0.02,
         .fractal_type = .fbm,
     };

@@ -110,7 +110,7 @@ fn draw() !void {
     ray.BeginMode2D(camera);
     world.draw(camera, .{ .walls = true, .blocks = true });
     player.draw();
-    world.draw(camera, .{ .lighting = true });
+    // world.draw(camera, .{ .lighting = true });
     ray.EndMode2D();
 }
 
@@ -119,7 +119,10 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    world = try World.init(allocator, .{});
+    const time = std.time.timestamp();
+    const seed: i32 = @truncate(time);
+
+    world = try World.init(allocator, .{ .seed = seed });
     defer world.deinit();
 
     player = .{};
