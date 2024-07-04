@@ -111,7 +111,6 @@ fn draw() !void {
     ray.BeginMode2D(camera);
     world.draw(camera, .{ .walls = true, .blocks = true });
     player.draw();
-    // world.draw(camera, .{ .lighting = true });
     world.drawSmoothLighting(camera);
     ray.EndMode2D();
 }
@@ -126,6 +125,7 @@ pub fn main() !void {
 
     world = try World.init(allocator, .{ .seed = seed });
     defer world.deinit();
+    world.advance_time = false;
 
     player = .{};
     player.position = world.findPlayerSpawn();

@@ -17,6 +17,7 @@ tiles_width: usize,
 tiles_height: usize,
 
 time: u32 = 0,
+advance_time: bool = true,
 
 const WorldOptions = struct {
     tile_width: usize = 2048,
@@ -125,10 +126,10 @@ pub fn findPlayerSpawn(self: World) ray.Vector2 {
 }
 
 pub fn update(self: *World) void {
-    self.time += 1;
-    if (self.time >= 3600) {
-        self.time = 0;
+    if (self.advance_time) {
+        self.time += 1;
     }
+    self.time = @mod(self.time, 3600);
 }
 
 pub fn draw(self: World, camera: ray.Camera2D, comptime options: DrawOptions) void {
@@ -167,18 +168,50 @@ pub fn draw(self: World, camera: ray.Camera2D, comptime options: DrawOptions) vo
 }
 
 pub fn drawSmoothLighting(self: World, camera: ray.Camera2D) void {
-    self.draw(camera, .{ .lighting = true });
-    // const camera_bounds: ray.Rectangle = .{
-    //     .x = camera.target.x - camera.offset.x,
-    //     .y = camera.target.y - camera.offset.y,
-    //     .width = config.window_width,
-    //     .height = config.window_height,
-    // };
-    //
-    // const clamp = std.math.clamp;
-    //
-    // const left_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.x, config.tile_size), 0, @as(f32, @floatFromInt(self.tiles_width))));
-    // const top_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.y, config.tile_size), 0, @as(f32, @floatFromInt(self.tiles_height))));
-    // const right_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.x + camera_bounds.width - 1, config.tile_size) + 1, 0, @as(f32, @floatFromInt(self.tiles_width))));
-    // const bottom_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.y + camera_bounds.height - 1, config.tile_size) + 1, 0, @as(f32, @floatFromInt(self.tiles_height))));
+    const camera_bounds: ray.Rectangle = .{
+        .x = camera.target.x - camera.offset.x,
+        .y = camera.target.y - camera.offset.y,
+        .width = config.window_width,
+        .height = config.window_height,
+    };
+
+    const clamp = std.math.clamp;
+
+    const left_edge: usize = @intFromFloat(clamp(@divFloor(camera_bounds.x, config.tile_size), 0, @as(f32, @floatFromInt(self.tiles_width))));
+    const top_edge: usize = @intFromFloat(clamp(@divFloor(camera_bounds.y, config.tile_size), 0, @as(f32, @floatFromInt(self.tiles_height))));
+    const right_edge: usize = @intFromFloat(clamp(@divFloor(camera_bounds.x + camera_bounds.width - 1, config.tile_size) + 1, 0, @as(f32, @floatFromInt(self.tiles_width))));
+    const bottom_edge: usize = @intFromFloat(clamp(@divFloor(camera_bounds.y + camera_bounds.height - 1, config.tile_size) + 1, 0, @as(f32, @floatFromInt(self.tiles_height))));
+
+    for (top_edge..bottom_edge + 1) |tile_y| {
+        for (left_edge..right_edge + 1) |tile_x| {
+            const left_tile_x = tile_x - @min(tile_x, 1);
+            const right_tile_x = @min(left_tile_x + 1, self.tiles_width - 1);
+            const top_tile_y = tile_y - @min(tile_y, 1);
+            const bottom_tile_y = @min(top_tile_y + 1, self.tiles_height - 1);
+
+            const top_left_light: u4 = self.getTileAssert(left_tile_x, top_tile_y).sky_light;
+            const top_right_light: u4 = self.getTileAssert(right_tile_x, top_tile_y).sky_light;
+            const bottom_left_light: u4 = self.getTileAssert(left_tile_x, bottom_tile_y).sky_light;
+            const bottom_right_light: u4 = self.getTileAssert(right_tile_x, bottom_tile_y).sky_light;
+
+            const top_left_alpha = Tile.lightLevelToDarknessAlpha(top_left_light);
+            const top_right_alpha = Tile.lightLevelToDarknessAlpha(top_right_light);
+            const bottom_left_alpha = Tile.lightLevelToDarknessAlpha(bottom_left_light);
+            const bottom_right_alpha = Tile.lightLevelToDarknessAlpha(bottom_right_light);
+
+            const rectangle: ray.Rectangle = .{
+                .x = (@as(f32, @floatFromInt(tile_x)) - 0.5) * config.tile_size,
+                .y = (@as(f32, @floatFromInt(tile_y)) - 0.5) * config.tile_size,
+                .width = config.tile_size,
+                .height = config.tile_size,
+            };
+            ray.DrawRectangleGradientEx(
+                rectangle,
+                .{ .a = top_left_alpha },
+                .{ .a = bottom_left_alpha },
+                .{ .a = bottom_right_alpha },
+                .{ .a = top_right_alpha },
+            );
+        }
+    }
 }

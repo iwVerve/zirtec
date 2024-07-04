@@ -1,3 +1,5 @@
+const std = @import("std");
+
 const ray = @import("raylib.zig");
 const asset = @import("asset.zig");
 const World = @import("World.zig");
@@ -58,6 +60,13 @@ fn getWallTexture(wall: WallType) ?ray.Texture2D {
     };
 }
 
+pub fn lightLevelToDarknessAlpha(light_level: u4) u8 {
+    const ratio = @as(f32, @floatFromInt(light_level)) / 15;
+    const shaped = std.math.pow(f32, ratio, 2);
+    return @intFromFloat(std.math.lerp(255, 0, shaped));
+    // return 17 * @as(u8, @intCast(15 - light_level));
+}
+
 pub fn draw(self: Tile, rectangle: ray.Rectangle, comptime options: World.DrawOptions, daylight_level: u4) void {
     if (options.walls) {
         const wall_texture = getWallTexture(self.wall);
@@ -75,7 +84,6 @@ pub fn draw(self: Tile, rectangle: ray.Rectangle, comptime options: World.DrawOp
 
     if (options.lighting) {
         const light = self.sky_light - @min(15 - daylight_level, self.sky_light);
-        const darkness_alpha = 17 * @as(u8, @intCast(15 - light));
-        ray.DrawRectangleRec(rectangle, .{ .r = 0, .g = 0, .b = 0, .a = darkness_alpha });
+        ray.DrawRectangleRec(rectangle, .{ .a = lightLevelToDarknessAlpha(light) });
     }
 }
