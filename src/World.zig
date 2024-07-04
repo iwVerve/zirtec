@@ -168,6 +168,12 @@ pub fn draw(self: World, camera: ray.Camera2D, comptime options: DrawOptions) vo
 }
 
 pub fn drawSmoothLighting(self: World, camera: ray.Camera2D) void {
+    const math = std.math;
+    const cos = @cos(2 * math.pi * @as(f32, @floatFromInt(self.time)) / 3600);
+    const squared = math.sign(cos) * math.pow(f32, @abs(cos), 0.75);
+    const daylight_ratio: f32 = squared / 2 + 0.5;
+    const daylight_level: u4 = @intFromFloat(math.lerp(0, 15, math.clamp(daylight_ratio, 0, 1)));
+
     const camera_bounds: ray.Rectangle = .{
         .x = camera.target.x - camera.offset.x,
         .y = camera.target.y - camera.offset.y,
@@ -189,10 +195,10 @@ pub fn drawSmoothLighting(self: World, camera: ray.Camera2D) void {
             const top_tile_y = tile_y - @min(tile_y, 1);
             const bottom_tile_y = @min(top_tile_y + 1, self.tiles_height - 1);
 
-            const top_left_light: u4 = self.getTileAssert(left_tile_x, top_tile_y).sky_light;
-            const top_right_light: u4 = self.getTileAssert(right_tile_x, top_tile_y).sky_light;
-            const bottom_left_light: u4 = self.getTileAssert(left_tile_x, bottom_tile_y).sky_light;
-            const bottom_right_light: u4 = self.getTileAssert(right_tile_x, bottom_tile_y).sky_light;
+            const top_left_light: u4 = self.getTileAssert(left_tile_x, top_tile_y).getCurrentSkyLight(daylight_level);
+            const top_right_light: u4 = self.getTileAssert(right_tile_x, top_tile_y).getCurrentSkyLight(daylight_level);
+            const bottom_left_light: u4 = self.getTileAssert(left_tile_x, bottom_tile_y).getCurrentSkyLight(daylight_level);
+            const bottom_right_light: u4 = self.getTileAssert(right_tile_x, bottom_tile_y).getCurrentSkyLight(daylight_level);
 
             const top_left_alpha = Tile.lightLevelToDarknessAlpha(top_left_light);
             const top_right_alpha = Tile.lightLevelToDarknessAlpha(top_right_light);

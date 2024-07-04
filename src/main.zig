@@ -125,7 +125,6 @@ pub fn main() !void {
 
     world = try World.init(allocator, .{ .seed = seed });
     defer world.deinit();
-    world.advance_time = false;
 
     player = .{};
     player.position = world.findPlayerSpawn();

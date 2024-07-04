@@ -60,6 +60,10 @@ fn getWallTexture(wall: WallType) ?ray.Texture2D {
     };
 }
 
+pub fn getCurrentSkyLight(self: Tile, daylight_level: u4) u4 {
+    return self.sky_light - @min(15 - daylight_level, self.sky_light);
+}
+
 pub fn lightLevelToDarknessAlpha(light_level: u4) u8 {
     const ratio = @as(f32, @floatFromInt(light_level)) / 15;
     const shaped = std.math.pow(f32, ratio, 2);
@@ -83,7 +87,7 @@ pub fn draw(self: Tile, rectangle: ray.Rectangle, comptime options: World.DrawOp
     }
 
     if (options.lighting) {
-        const light = self.sky_light - @min(15 - daylight_level, self.sky_light);
+        const light = self.getCurrentSkyLight(daylight_level);
         ray.DrawRectangleRec(rectangle, .{ .a = lightLevelToDarknessAlpha(light) });
     }
 }
