@@ -10,11 +10,13 @@ const lighting = @import("lighting.zig");
 
 const World = @This();
 
+allocator: Allocator,
+
 tile_map: ArrayList(ArrayList(Tile)),
 tiles_width: usize,
 tiles_height: usize,
 
-allocator: Allocator,
+time: u32 = 0,
 
 const WorldOptions = struct {
     tile_width: usize = 2048,
@@ -122,7 +124,20 @@ pub fn findPlayerSpawn(self: World) ray.Vector2 {
     };
 }
 
+pub fn update(self: *World) void {
+    self.time += 1;
+    if (self.time >= 3600) {
+        self.time = 0;
+    }
+}
+
 pub fn draw(self: World, camera: ray.Camera2D, comptime options: DrawOptions) void {
+    const math = std.math;
+    const cos = @cos(2 * math.pi * @as(f32, @floatFromInt(self.time)) / 3600);
+    const squared = math.sign(cos) * math.pow(f32, @abs(cos), 0.75);
+    const daylight_ratio: f32 = squared / 2 + 0.5;
+    const daylight_level: u4 = @intFromFloat(math.lerp(0, 15, math.clamp(daylight_ratio, 0, 1)));
+
     const camera_bounds: ray.Rectangle = .{
         .x = camera.target.x - camera.offset.x,
         .y = camera.target.y - camera.offset.y,
@@ -146,7 +161,24 @@ pub fn draw(self: World, camera: ray.Camera2D, comptime options: DrawOptions) vo
                 .width = config.tile_size,
                 .height = config.tile_size,
             };
-            tile.draw(rectangle, options);
+            tile.draw(rectangle, options, daylight_level);
         }
     }
+}
+
+pub fn drawSmoothLighting(self: World, camera: ray.Camera2D) void {
+    self.draw(camera, .{ .lighting = true });
+    // const camera_bounds: ray.Rectangle = .{
+    //     .x = camera.target.x - camera.offset.x,
+    //     .y = camera.target.y - camera.offset.y,
+    //     .width = config.window_width,
+    //     .height = config.window_height,
+    // };
+    //
+    // const clamp = std.math.clamp;
+    //
+    // const left_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.x, config.tile_size), 0, @as(f32, @floatFromInt(self.tiles_width))));
+    // const top_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.y, config.tile_size), 0, @as(f32, @floatFromInt(self.tiles_height))));
+    // const right_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.x + camera_bounds.width - 1, config.tile_size) + 1, 0, @as(f32, @floatFromInt(self.tiles_width))));
+    // const bottom_index: usize = @intFromFloat(clamp(@divFloor(camera_bounds.y + camera_bounds.height - 1, config.tile_size) + 1, 0, @as(f32, @floatFromInt(self.tiles_height))));
 }

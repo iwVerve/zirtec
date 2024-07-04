@@ -97,6 +97,7 @@ fn update() !void {
     build_state.update();
     player.update(world);
     updateCamera();
+    world.update();
 
     try draw();
 }
@@ -111,6 +112,7 @@ fn draw() !void {
     world.draw(camera, .{ .walls = true, .blocks = true });
     player.draw();
     // world.draw(camera, .{ .lighting = true });
+    world.drawSmoothLighting(camera);
     ray.EndMode2D();
 }
 
